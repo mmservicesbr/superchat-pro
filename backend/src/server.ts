@@ -17,6 +17,7 @@ import { quickRepliesRouter } from './routes/quickReplies.js';
 import { usersRouter } from './routes/users.js';
 import { companiesRouter } from './routes/companies.js';
 import { dashboardRouter } from './routes/dashboard.js';
+import { liveMonitoringRouter } from './routes/liveMonitoring.js';
 
 // Initialize DB schema & seed data
 initDatabase();
@@ -51,6 +52,7 @@ app.use('/api/quick-replies', quickRepliesRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/companies', companiesRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/live-monitoring', liveMonitoringRouter);
 
 // Healthcheck
 app.get('/api/health', (req, res) => {

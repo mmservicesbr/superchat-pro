@@ -1,124 +1,216 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { 
+  LayoutGrid, 
   MessageSquare, 
-  Kanban, 
+  Search, 
+  Radio, 
+  Contact, 
+  Users, 
+  Briefcase, 
+  CheckSquare, 
+  Send, 
+  Bot, 
   BarChart3, 
   Smartphone, 
-  Layers, 
-  Zap, 
-  Users, 
-  Building2, 
-  LogOut,
+  Settings,
   ChevronRight,
-  Menu
+  ChevronLeft,
+  Building2,
+  Kanban
 } from 'lucide-react';
 
 interface SidebarProps {
   currentTab: string;
   setCurrentTab: (tab: string) => void;
   pendingCount: number;
+  isExpanded: boolean;
+  setIsExpanded: (expanded: boolean | ((prev: boolean) => boolean)) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, pendingCount }) => {
-  const { user, logout, updateStatus } = useAuth();
-  const [isExpanded, setIsExpanded] = React.useState(true);
+export const Sidebar: React.FC<SidebarProps> = ({ 
+  currentTab, 
+  setCurrentTab, 
+  pendingCount,
+  isExpanded,
+  setIsExpanded
+}) => {
+  const { user } = useAuth();
 
   if (!user) return null;
 
+  // Exact 13 items in order from SingleChat screenshot
   const navItems = [
-    { id: 'chat', label: 'Atendimento', icon: MessageSquare, badge: pendingCount > 0 ? pendingCount : null },
-    { id: 'kanban', label: 'Kanban CRM', icon: Kanban },
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'whatsapp', label: 'Conexões WhatsApp', icon: Smartphone },
-    { id: 'queues', label: 'Filas & URA', icon: Layers },
-    { id: 'quickReplies', label: 'Respostas Rápidas', icon: Zap },
-    { id: 'users', label: 'Equipe & Usuários', icon: Users },
+    { id: 'dashboard', hash: '#/home-dashboard', label: 'Dashboard', icon: LayoutGrid },
+    { id: 'chat', hash: '#/tickets', label: 'Atendimentos', icon: MessageSquare, badge: pendingCount > 0 ? pendingCount : null },
+    { id: 'kanban', hash: '#/kanban', label: 'Kanban CRM', icon: Kanban },
+    { id: 'ao-vivo', hash: '#/ao-vivo', label: 'Ao Vivo', icon: Radio, isLive: true },
+    { id: 'reports', hash: '#/reports/pipeline-steps-work', label: 'Funil & Vendas', icon: BarChart3 },
+    { id: 'users', hash: '#/users', label: 'Equipe & Usuários', icon: Users },
+    { id: 'queues', hash: '#/departments', label: 'Departamentos', icon: Briefcase },
+    { id: 'quickReplies', hash: '#/tasks', label: 'Respostas & Tarefas', icon: CheckSquare },
+    { id: 'whatsapp', hash: '#/connections', label: 'Conexões WhatsApp', icon: Smartphone },
   ];
 
   if (user.role === 'superadmin') {
-    navItems.push({ id: 'companies', label: 'Empresas (SaaS)', icon: Building2 });
+    navItems.push({ id: 'companies', hash: '#/companies', label: 'Empresas (SaaS)', icon: Building2 });
   }
 
-  return (
-    <aside className={`sidebar ${isExpanded ? 'expanded' : ''}`}>
-      {/* Brand Header */}
-      <div className="sidebar-logo">
-        <div className="logo-badge" onClick={() => setIsExpanded(!isExpanded)} style={{ cursor: 'pointer' }}>
-          <MessageSquare size={22} />
-        </div>
-        {isExpanded && (
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="logo-text">SingleChat</div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--primary)', fontWeight: 600 }}>
-              {user.companyPlan || 'Pro'}
-            </div>
-          </div>
-        )}
-      </div>
+  const handleNavClick = (item: any) => {
+    setCurrentTab(item.id);
+    if (item.hash) {
+      window.location.hash = item.hash;
+    }
+  };
 
-      {/* Navigation Links */}
-      <nav className="sidebar-nav">
+  return (
+    <aside style={{
+      width: isExpanded ? '210px' : '60px',
+      backgroundColor: '#ffffff',
+      borderRight: '1px solid #e2e8f0',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+      padding: '8px 0',
+      transition: 'width 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+      zIndex: 50,
+      userSelect: 'none',
+      flexShrink: 0
+    }}>
+      {/* Navigation Rail */}
+      <nav style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        padding: isExpanded ? '0 8px' : '0 6px',
+        overflowY: 'auto'
+      }}>
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentTab === item.id;
           return (
             <button
               key={item.id}
-              className={`nav-item ${isActive ? 'active' : ''}`}
-              onClick={() => setCurrentTab(item.id)}
+              onClick={() => handleNavClick(item)}
               title={!isExpanded ? item.label : undefined}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: isExpanded ? '9px 12px' : '9px',
+                justifyContent: isExpanded ? 'flex-start' : 'center',
+                borderRadius: '8px',
+                backgroundColor: isActive ? '#f0f9ff' : 'transparent',
+                color: isActive ? '#0284c7' : '#64748b',
+                fontWeight: isActive ? 700 : 500,
+                fontSize: '0.84rem',
+                position: 'relative',
+                transition: 'all 0.15s ease',
+                border: 'none',
+                cursor: 'pointer',
+                width: '100%'
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor = '#f8fafc';
+                  e.currentTarget.style.color = '#0f172a';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#64748b';
+                }
+              }}
             >
-              <Icon size={20} />
-              {isExpanded && <span>{item.label}</span>}
-              {item.badge && <span className="nav-badge">{item.badge}</span>}
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon size={19} strokeWidth={isActive ? 2.3 : 1.7} />
+                {item.isLive && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-2px',
+                    right: '-2px',
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: '#ef4444'
+                  }} />
+                )}
+              </div>
+
+              {isExpanded && (
+                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, textAlign: 'left' }}>
+                  {item.label}
+                </span>
+              )}
+
+              {item.badge && (
+                <span style={{
+                  backgroundColor: '#ef4444',
+                  color: '#ffffff',
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  padding: '1px 6px',
+                  borderRadius: '9999px',
+                  marginLeft: 'auto'
+                }}>
+                  {item.badge}
+                </span>
+              )}
             </button>
           );
         })}
       </nav>
 
-      {/* Footer / User Profile */}
-      <div className="sidebar-footer">
-        <div className="user-profile">
-          <div className="user-avatar">
-            {user.name.substring(0, 2).toUpperCase()}
-            <div className={`status-dot ${user.status}`} />
-          </div>
-          {isExpanded && (
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {user.name}
-              </div>
-              <div style={{ display: 'flex', gap: '4px', marginTop: '3px' }}>
-                <select
-                  value={user.status}
-                  onChange={(e) => updateStatus(e.target.value as any)}
-                  style={{
-                    fontSize: '0.72rem',
-                    padding: '2px 4px',
-                    borderRadius: '4px',
-                    backgroundColor: 'rgba(0,0,0,0.3)',
-                    border: 'none',
-                    color: user.status === 'online' ? '#10b981' : user.status === 'busy' ? '#f59e0b' : '#94a3b8'
-                  }}
-                >
-                  <option value="online">Online</option>
-                  <option value="busy">Ocupado</option>
-                  <option value="offline">Offline</option>
-                </select>
-              </div>
-            </div>
-          )}
-        </div>
-
+      {/* Bottom Row: Settings & Sidebar Collapse Toggle Arrow (Screenshot 1 & 5) */}
+      <div style={{
+        padding: isExpanded ? '8px 8px 4px 8px' : '8px 6px 4px 6px',
+        borderTop: '1px solid #f1f5f9',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px'
+      }}>
         <button
-          onClick={logout}
-          className="btn-secondary"
-          style={{ width: '100%', justifyContent: isExpanded ? 'flex-start' : 'center', padding: '8px' }}
-          title="Sair do sistema"
+          onClick={() => { setCurrentTab('users'); window.location.hash = '#/settings'; }}
+          title={!isExpanded ? 'Configurações' : undefined}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: isExpanded ? '9px 12px' : '9px',
+            justifyContent: isExpanded ? 'flex-start' : 'center',
+            borderRadius: '8px',
+            color: '#64748b',
+            fontSize: '0.84rem',
+            border: 'none',
+            cursor: 'pointer',
+            width: '100%'
+          }}
         >
-          <LogOut size={16} />
-          {isExpanded && <span>Sair</span>}
+          <Settings size={19} strokeWidth={1.7} />
+          {isExpanded && <span>Configurações</span>}
+        </button>
+
+        {/* The collapse/expand circle arrow visible at the bottom of screenshot 1, 2, 3, 5 */}
+        <button
+          onClick={() => setIsExpanded(prev => !prev)}
+          title={isExpanded ? 'Recolher menu' : 'Expandir menu'}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '8px',
+            borderRadius: '50%',
+            color: '#0284c7',
+            backgroundColor: '#f0f9ff',
+            border: '1px solid #e0f2fe',
+            cursor: 'pointer',
+            margin: '6px auto 2px auto',
+            width: '28px',
+            height: '28px'
+          }}
+        >
+          {isExpanded ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
         </button>
       </div>
     </aside>
