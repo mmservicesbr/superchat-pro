@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: singlechat-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - JWT_SECRET=singlechat_super_secure_jwt_secret_2026
+      - CORS_ORIGIN=*
+    volumes:
+      - singlechat-data:/app/data
+    networks:
+      - singlechat-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: singlechat-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - singlechat-net
+
+volumes:
+  singlechat-data:
+    driver: local
+
+networks:
+  singlechat-net:
+    driver: bridge
