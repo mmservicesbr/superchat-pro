@@ -24,8 +24,8 @@ services:
       dockerfile: Dockerfile
     container_name: singlechat-frontend
     restart: unless-stopped
-    expose:
-      - "80"
+    ports:
+      - "3080:80"
     depends_on:
       - backend
     networks:
