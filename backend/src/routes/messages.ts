@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from '../database/db.js';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/auth.js';
 import { getIO } from '../sockets/socketManager.js';
+import { sendWhatsAppMessage } from '../services/whatsappService.js';
 
 export const messagesRouter = Router();
 messagesRouter.use(authMiddleware);
@@ -23,7 +24,7 @@ messagesRouter.get('/:ticketId', (req: AuthenticatedRequest, res) => {
   res.json(messages);
 });
 
-messagesRouter.post('/:ticketId', (req: AuthenticatedRequest, res) => {
+messagesRouter.post('/:ticketId', async (req: AuthenticatedRequest, res) => {
   const { ticketId } = req.params;
   const { content, messageType = 'chat', mediaUrl, mediaName, isInternal = 0 } = req.body;
 
@@ -52,6 +53,23 @@ messagesRouter.post('/:ticketId', (req: AuthenticatedRequest, res) => {
       SET last_message = ?, last_message_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(preview, ticketId);
+
+    // Send real message to WhatsApp via Baileys if not an internal note!
+    try {
+      const ticketInfo = db.prepare(`
+        SELECT t.*, c.phone as contact_phone
+        FROM tickets t
+        JOIN contacts c ON t.contact_id = c.id
+        WHERE t.id = ?
+      `).get(ticketId) as any;
+
+      if (ticketInfo?.contact_phone) {
+        // Send via WhatsApp session
+        sendWhatsAppMessage('', ticketInfo.contact_phone, content).catch((err) => {
+          console.warn('[WhatsApp] Nota de envio Baileys (WhatsApp não conectado no momento ou falha de entrega):', err.message);
+        });
+      }
+    } catch (err) {}
   }
 
   const newMessage = {
@@ -81,7 +99,7 @@ messagesRouter.post('/:ticketId', (req: AuthenticatedRequest, res) => {
   res.status(201).json(newMessage);
 });
 
-// Endpoint to simulate incoming customer message (useful for testing real-time live chat!)
+// Endpoint to simulate incoming customer message (great for quick testing)
 messagesRouter.post('/:ticketId/simulate-customer', (req: AuthenticatedRequest, res) => {
   const { ticketId } = req.params;
   const { content, messageType = 'chat' } = req.body;

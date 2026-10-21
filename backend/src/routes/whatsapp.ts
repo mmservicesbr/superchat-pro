@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from '../database/db.js';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/auth.js';
 import { getIO } from '../sockets/socketManager.js';
+import { initWhatsAppSession, disconnectSession } from '../services/whatsappService.js';
 
 export const whatsappRouter = Router();
 whatsappRouter.use(authMiddleware);
@@ -31,52 +32,27 @@ whatsappRouter.post('/', (req: AuthenticatedRequest, res) => {
   res.status(201).json({ id, name, status: 'DISCONNECTED' });
 });
 
-// Request QR Code (Inicia tentativa de conexão)
-whatsappRouter.post('/:id/qrcode', (req: AuthenticatedRequest, res) => {
+// Request QR Code (Inicia a sessão Baileys real)
+whatsappRouter.post('/:id/qrcode', async (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
   const companyId = req.user!.companyId;
 
-  // Generate a mock QR code string/payload for instant demo or Baileys engine
-  const mockQr = `2@singlechat-whatsapp-session-${Date.now()}-${uuidv4()}`;
-
-  db.prepare(`
-    UPDATE whatsapp_connections
-    SET status = 'QRCODE', qr_code_data = ?, updated_at = CURRENT_TIMESTAMP
-    WHERE id = ? AND company_id = ?
-  `).run(mockQr, id, companyId);
-
   try {
-    const io = getIO();
-    io.to(`company_${companyId}`).emit('whatsappStatus', { id, status: 'QRCODE', qrCodeData: mockQr });
-  } catch (err) {}
-
-  res.json({ id, status: 'QRCODE', qrCodeData: mockQr });
+    // Inicia Baileys para gerar o QR code real
+    await initWhatsAppSession(id, companyId);
+    res.json({ id, status: 'CONNECTING', message: 'Gerando QR Code...' });
+  } catch (err: any) {
+    console.error('Erro ao iniciar sessão Baileys:', err);
+    res.status(500).json({ error: 'Erro ao inicializar conexão do WhatsApp' });
+  }
 });
 
-// Simulate successful connection (Scan QR Code)
-whatsappRouter.post('/:id/connect', (req: AuthenticatedRequest, res) => {
-  const { id } = req.params;
-  const companyId = req.user!.companyId;
-  const phoneNumber = req.body.phoneNumber || '+55 (11) 9' + Math.floor(10000000 + Math.random() * 90000000);
-
-  db.prepare(`
-    UPDATE whatsapp_connections
-    SET status = 'CONNECTED', phone_number = ?, qr_code_data = NULL, updated_at = CURRENT_TIMESTAMP
-    WHERE id = ? AND company_id = ?
-  `).run(phoneNumber, id, companyId);
-
-  try {
-    const io = getIO();
-    io.to(`company_${companyId}`).emit('whatsappStatus', { id, status: 'CONNECTED', phoneNumber });
-  } catch (err) {}
-
-  res.json({ success: true, status: 'CONNECTED', phoneNumber });
-});
-
-// Disconnect
+// Desconectar sessão Baileys
 whatsappRouter.post('/:id/disconnect', (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
   const companyId = req.user!.companyId;
+
+  disconnectSession(id);
 
   db.prepare(`
     UPDATE whatsapp_connections
@@ -92,10 +68,12 @@ whatsappRouter.post('/:id/disconnect', (req: AuthenticatedRequest, res) => {
   res.json({ success: true, status: 'DISCONNECTED' });
 });
 
-// Delete connection
+// Deletar conexão
 whatsappRouter.delete('/:id', (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
   const companyId = req.user!.companyId;
+
+  disconnectSession(id);
 
   db.prepare(`DELETE FROM whatsapp_connections WHERE id = ? AND company_id = ?`).run(id, companyId);
   res.json({ success: true });

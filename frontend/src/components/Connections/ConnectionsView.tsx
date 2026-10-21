@@ -33,11 +33,21 @@ export const ConnectionsView: React.FC = () => {
 
   useEffect(() => {
     if (!socket) return;
-    socket.on('whatsappStatus', fetchConnections);
-    return () => {
-      socket.off('whatsappStatus', fetchConnections);
+    const handleStatus = (data: any) => {
+      fetchConnections();
+      if (activeQrModal && data.id === activeQrModal.id) {
+        if (data.status === 'QRCODE' && data.qrCodeData) {
+          setActiveQrModal(prev => prev ? { ...prev, qr_code_data: data.qrCodeData, status: 'QRCODE' } : null);
+        } else if (data.status === 'CONNECTED') {
+          setActiveQrModal(null);
+        }
+      }
     };
-  }, [socket]);
+    socket.on('whatsappStatus', handleStatus);
+    return () => {
+      socket.off('whatsappStatus', handleStatus);
+    };
+  }, [socket, activeQrModal?.id]);
 
   // Request QR code
   const handleRequestQr = async (conn: WhatsAppConnection) => {
@@ -224,45 +234,29 @@ export const ConnectionsView: React.FC = () => {
                 Abra o WhatsApp no seu celular, vá em <b>Aparelhos Conectados &gt; Conectar um aparelho</b> e aponte a câmera:
               </p>
 
-              {/* High Tech QR Graphic */}
+              {/* Real WhatsApp QR Code Image */}
               <div style={{
                 margin: '20px auto',
                 padding: '16px',
                 background: '#ffffff',
                 borderRadius: '16px',
                 display: 'inline-block',
-                boxShadow: '0 0 30px rgba(16, 185, 129, 0.3)'
+                boxShadow: '0 0 30px rgba(16, 185, 129, 0.3)',
+                minWidth: '220px',
+                minHeight: '220px'
               }}>
-                <svg width="200" height="200" viewBox="0 0 200 200">
-                  {/* Outer corner anchors */}
-                  <rect x="10" y="10" width="50" height="50" fill="#000" rx="8" />
-                  <rect x="20" y="20" width="30" height="30" fill="#fff" rx="4" />
-                  <rect x="27" y="27" width="16" height="16" fill="#10b981" rx="2" />
-
-                  <rect x="140" y="10" width="50" height="50" fill="#000" rx="8" />
-                  <rect x="150" y="20" width="30" height="30" fill="#fff" rx="4" />
-                  <rect x="157" y="27" width="16" height="16" fill="#10b981" rx="2" />
-
-                  <rect x="10" y="140" width="50" height="50" fill="#000" rx="8" />
-                  <rect x="20" y="150" width="30" height="30" fill="#fff" rx="4" />
-                  <rect x="27" y="157" width="16" height="16" fill="#10b981" rx="2" />
-
-                  {/* QR Matrix Pattern */}
-                  {[
-                    [70, 20], [90, 20], [110, 20],
-                    [70, 40], [100, 50], [120, 40],
-                    [20, 80], [40, 90], [60, 70], [80, 80], [100, 90], [130, 80], [160, 90],
-                    [30, 110], [60, 120], [90, 110], [110, 120], [140, 110], [170, 120],
-                    [70, 140], [100, 150], [120, 140], [150, 150],
-                    [80, 170], [110, 160], [140, 170], [170, 170]
-                  ].map(([x, y], idx) => (
-                    <rect key={idx} x={x} y={y} width="14" height="14" fill="#1e293b" rx="2" />
-                  ))}
-
-                  {/* Center SingleChat Logo Stamp */}
-                  <rect x="80" y="80" width="40" height="40" fill="#10b981" rx="8" />
-                  <path d="M 92 90 L 108 90 L 108 102 L 98 102 L 95 107 L 95 102 L 92 102 Z" fill="#ffffff" />
-                </svg>
+                {activeQrModal.qr_code_data && activeQrModal.qr_code_data.startsWith('data:image') ? (
+                  <img
+                    src={activeQrModal.qr_code_data}
+                    alt="WhatsApp QR Code"
+                    style={{ width: '220px', height: '220px', display: 'block', borderRadius: '8px' }}
+                  />
+                ) : (
+                  <div style={{ width: '220px', height: '220px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#1e293b' }}>
+                    <RefreshCw size={32} style={{ marginBottom: '12px', animation: 'pulse-soft 1.5s infinite' }} />
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Gerando QR Code...</span>
+                  </div>
+                )}
               </div>
 
               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>

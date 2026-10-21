@@ -5,6 +5,7 @@ import cors from 'cors';
 import { config } from './config.js';
 import { initDatabase } from './database/db.js';
 import { setupSocketIO } from './sockets/socketManager.js';
+import { restoreActiveSessions } from './services/whatsappService.js';
 
 // Routers
 import { authRouter } from './routes/auth.js';
@@ -19,6 +20,9 @@ import { dashboardRouter } from './routes/dashboard.js';
 
 // Initialize DB schema & seed data
 initDatabase();
+
+// Restore any active WhatsApp Baileys sessions
+restoreActiveSessions();
 
 const app = express();
 const server = http.createServer(app);
@@ -53,11 +57,13 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
     platform: 'SingleChat Pro',
+    engine: 'Baileys Multi-Device WhatsApp',
     timestamp: new Date().toISOString()
   });
 });
 
 server.listen(config.port, () => {
   console.log(`[SingleChat Backend] Servidor rodando na porta ${config.port}`);
+  console.log(`[SingleChat Backend] Engine WhatsApp Baileys ativo.`);
   console.log(`[SingleChat Backend] Healthcheck: http://localhost:${config.port}/api/health`);
 });
